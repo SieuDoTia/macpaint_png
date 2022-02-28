@@ -9,7 +9,7 @@ macPaint_PNG: $(list)
 PNG.o: PNG.c
 	$(CC) -c PNG.c
 
-MacPaint.o: macPaint.c macPaint.h
+macPaint.o: macPaint.c macPaint.h
 	$(CC) -c macPaint.c
 
 # ==== CLEAN
