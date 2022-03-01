@@ -11,4 +11,4 @@ typedef struct {
 DuLieuMacPaint docTapTinMacPaint( FILE *tapTinMacPaint );
 
 /* Lưư Tập Tin MacPaint */
-void luuTapTinMacPaint( FILE *tapTinMacPaint, DuLieuMacPaint *duLieuTapTin );
+void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTin, unsigned int beRong, unsigned int beCao );
