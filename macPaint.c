@@ -242,7 +242,11 @@ DuLieuMacPaint docTapTinMacPaint( FILE *tapTinMacPaint ) {
 //  3/16  5/16  1/16
 
 // Lưư ý: chỉ lưu 72 byte cho mỗi hàng (576 bit)
-void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG, unsigned int beRongPNG, unsigned int beCaoPNG ) {
+void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG, unsigned int beRongPNG, unsigned int beCaoPNG, unsigned char loaiPNG ) {
+   
+   unsigned short buocPNG = 4;  // kPNG_BGRO
+   if( loaiPNG == kPNG_BGR )
+      buocPNG = 3;
    
    FILE *tapTinMacPaint = fopen( tenTapTinMacPaint, "wb" );
    if( tapTinMacPaint == NULL ) {
@@ -311,6 +315,9 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
    // ---- nén dữ liệu ảnh
    unsigned char *demNen = malloc( 73*720 );
    unsigned char *demKhongNen = calloc( 72*720, 1 );
+   int *demSaiLamHienTai = calloc( 576+2, 4 );
+   int *demSaiLamSau = calloc( 576+2, 4 );
+
    if( demNen == NULL ) {
       printf( "Vấn đề đệm nén\n" );
       exit(0);
@@ -318,6 +325,16 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
    
    if( demKhongNen == NULL ) {
       printf( "Vấn đề tạo đệm không nén\n" );
+      exit(0);
+   }
+   
+   if( demSaiLamHienTai == NULL ) {
+      printf( "Vấn đề tạo đệm sai lầm\n" );
+      exit(0);
+   }
+   
+   if( demSaiLamSau == NULL ) {
+      printf( "Vấn đề tạo đệm sai lầm\n" );
       exit(0);
    }
    
@@ -329,11 +346,16 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
    if( beCaoPNG < 720 )
       beCaoQuet = beCaoPNG;
    
+   printf( " beRongQuet %d  beCaoQuet %d\n", beRongQuet, beCaoQuet );
+   
    unsigned int diaChiDemKhongNen = 0;
    int soHang = beCaoQuet - 1;
+   
+   int saiLamPhiaSau = 0;
+   int saiLam = 0;
 
    while( soHang > -1 ) {
-      unsigned int diaChiPNG = soHang*beRongPNG << 2; // RGBO
+      unsigned int diaChiPNG = soHang*beRongPNG*buocPNG; // RGBO
       
       unsigned int cot = 0;
       while( cot < beRongQuet ) {
@@ -343,12 +365,29 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
          unsigned short mauDo = kHE_SO_DO*duLieuTapTinPNG[diaChiPNG];
          unsigned short mauLuc = kHE_SO_LUC*duLieuTapTinPNG[diaChiPNG+1];
          unsigned short mauXanh = kHE_SO_XANH*duLieuTapTinPNG[diaChiPNG+2];
-         unsigned short doSang = mauDo + mauLuc + mauXanh;
-         diaChiPNG += 4;
+         int doSang = mauDo + mauLuc + mauXanh;
+         diaChiPNG += buocPNG;
          cot++;
+         
+         doSang += demSaiLamHienTai[cot+1] + saiLamPhiaSau;
+         // ---- hạn chế phạm vi độ sáng
+         if( doSang > 0xffff )
+            doSang = 0xffff;
+         else if( doSang < 0 )
+            doSang = 0;
 
-         if( doSang < 0x8000 )
+         if( doSang < 0x8000 ) {
             byte |= 0x80;
+            saiLam = doSang;
+         }
+         else
+            saiLam = doSang - 0xffff;
+
+         // ---- phân phối sai lầm
+         saiLamPhiaSau = ((7*saiLam) >> 4);
+         demSaiLamSau[cot] = (3*saiLam) >> 4;
+         demSaiLamSau[cot+1] = (5*saiLam) >> 4;
+         demSaiLamSau[cot+2] = saiLam >> 4;
          
          // ---- pixel 1
          if( cot < beRongQuet ) {
@@ -356,11 +395,28 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
             mauLuc = kHE_SO_LUC*duLieuTapTinPNG[diaChiPNG+1];
             mauXanh = kHE_SO_XANH*duLieuTapTinPNG[diaChiPNG+2];
             doSang = mauDo + mauLuc + mauXanh;
-            diaChiPNG += 4;
+            diaChiPNG += buocPNG;
             cot++;
+
+            doSang += demSaiLamHienTai[cot+1] + saiLamPhiaSau;
+            // ---- hạn chế phạm vi độ sáng
+            if( doSang > 0xffff )
+               doSang = 0xffff;
+            else if( doSang < 0 )
+               doSang = 0;
             
-            if( doSang < 0x8000 )
+            if( doSang < 0x8000 ) {
                byte |= 0x40;
+               saiLam = doSang;
+            }
+            else
+               saiLam = doSang - 0xffff;
+            
+            // ---- phân phối sai lầm
+            saiLamPhiaSau = ((7*saiLam) >> 4);
+            demSaiLamSau[cot] = (3*saiLam) >> 4;
+            demSaiLamSau[cot+1] = (5*saiLam) >> 4;
+            demSaiLamSau[cot+2] = saiLam >> 4;
          }
          
          // ---- pixel 2
@@ -369,11 +425,28 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
             mauLuc = kHE_SO_LUC*duLieuTapTinPNG[diaChiPNG+1];
             mauXanh = kHE_SO_XANH*duLieuTapTinPNG[diaChiPNG+2];
             doSang = mauDo + mauLuc + mauXanh;
-            diaChiPNG += 4;
+            diaChiPNG += buocPNG;
             cot++;
             
-            if( doSang < 0x8000 )
+            doSang += demSaiLamHienTai[cot+1] + saiLamPhiaSau;
+            // ---- hạn chế phạm vi độ sáng
+            if( doSang > 0xffff )
+               doSang = 0xffff;
+            else if( doSang < 0 )
+               doSang = 0;
+            
+            if( doSang < 0x8000 ) {
                byte |= 0x20;
+               saiLam = doSang;
+            }
+            else
+               saiLam = doSang - 0xffff;
+            
+            // ---- phân phối sai lầm
+            saiLamPhiaSau = ((7*saiLam) >> 4);
+            demSaiLamSau[cot] = (3*saiLam) >> 4;
+            demSaiLamSau[cot+1] = (5*saiLam) >> 4;
+            demSaiLamSau[cot+2] = saiLam >> 4;
          }
          
          // ---- pixel 3
@@ -382,11 +455,28 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
             mauLuc = kHE_SO_LUC*duLieuTapTinPNG[diaChiPNG+1];
             mauXanh = kHE_SO_XANH*duLieuTapTinPNG[diaChiPNG+2];
             doSang = mauDo + mauLuc + mauXanh;
-            diaChiPNG += 4;
+            diaChiPNG += buocPNG;
             cot++;
             
-            if( doSang < 0x8000 )
+            doSang += demSaiLamHienTai[cot+1] + saiLamPhiaSau;
+            // ---- hạn chế phạm vi độ sáng
+            if( doSang > 0xffff )
+               doSang = 0xffff;
+            else if( doSang < 0 )
+               doSang = 0;
+            
+            if( doSang < 0x8000 ) {
                byte |= 0x10;
+               saiLam = doSang;
+            }
+            else
+               saiLam = doSang - 0xffff;
+            
+            // ---- phân phối sai lầm
+            saiLamPhiaSau = ((7*saiLam) >> 4);
+            demSaiLamSau[cot] = (3*saiLam) >> 4;
+            demSaiLamSau[cot+1] = (5*saiLam) >> 4;
+            demSaiLamSau[cot+2] = saiLam >> 4;
          }
          
          // ---- pixel 4
@@ -395,11 +485,28 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
             mauLuc = kHE_SO_LUC*duLieuTapTinPNG[diaChiPNG+1];
             mauXanh = kHE_SO_XANH*duLieuTapTinPNG[diaChiPNG+2];
             doSang = mauDo + mauLuc + mauXanh;
-            diaChiPNG += 4;
+            diaChiPNG += buocPNG;
             cot++;
             
-            if( doSang < 0x8000 )
+            doSang += demSaiLamHienTai[cot+1] + saiLamPhiaSau;
+            // ---- hạn chế phạm vi độ sáng
+            if( doSang > 0xffff )
+               doSang = 0xffff;
+            else if( doSang < 0 )
+               doSang = 0;
+            
+            if( doSang < 0x8000 ) {
                byte |= 0x08;
+               saiLam = doSang;
+            }
+            else
+               saiLam = doSang - 0xffff;
+            
+            // ---- phân phối sai lầm
+            saiLamPhiaSau = ((7*saiLam) >> 4);
+            demSaiLamSau[cot] = (3*saiLam) >> 4;
+            demSaiLamSau[cot+1] = (5*saiLam) >> 4;
+            demSaiLamSau[cot+2] = saiLam >> 4;
          }
 
          // ---- pixel 5
@@ -408,11 +515,28 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
             mauLuc = kHE_SO_LUC*duLieuTapTinPNG[diaChiPNG+1];
             mauXanh = kHE_SO_XANH*duLieuTapTinPNG[diaChiPNG+2];
             doSang = mauDo + mauLuc + mauXanh;
-            diaChiPNG += 4;
+            diaChiPNG += buocPNG;
             cot++;
             
-            if( doSang < 0x8000 )
+            doSang += demSaiLamHienTai[cot+1] + saiLamPhiaSau;
+            // ---- hạn chế phạm vi độ sáng
+            if( doSang > 0xffff )
+               doSang = 0xffff;
+            else if( doSang < 0 )
+               doSang = 0;
+            
+            if( doSang < 0x8000 ) {
                byte |= 0x04;
+               saiLam = doSang;
+            }
+            else
+               saiLam = doSang - 0xffff;
+            
+            // ---- phân phối sai lầm
+            saiLamPhiaSau = ((7*saiLam) >> 4);
+            demSaiLamSau[cot] = (3*saiLam) >> 4;
+            demSaiLamSau[cot+1] = (5*saiLam) >> 4;
+            demSaiLamSau[cot+2] = saiLam >> 4;
          }
 
          // ---- pixel 6
@@ -421,11 +545,28 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
             mauLuc = kHE_SO_LUC*duLieuTapTinPNG[diaChiPNG+1];
             mauXanh = kHE_SO_XANH*duLieuTapTinPNG[diaChiPNG+2];
             doSang = mauDo + mauLuc + mauXanh;
-            diaChiPNG += 4;
+            diaChiPNG += buocPNG;
             cot++;
             
-            if( doSang < 0x8000 )
+            doSang += demSaiLamHienTai[cot+1] + saiLamPhiaSau;
+            // ---- hạn chế phạm vi độ sáng
+            if( doSang > 0xffff )
+               doSang = 0xffff;
+            else if( doSang < 0 )
+               doSang = 0;
+            
+            if( doSang < 0x8000 ) {
                byte |= 0x02;
+               saiLam = doSang;
+            }
+            else
+               saiLam = doSang - 0xffff;
+            
+            // ---- phân phối sai lầm
+            saiLamPhiaSau = ((7*saiLam) >> 4);
+            demSaiLamSau[cot] = (3*saiLam) >> 4;
+            demSaiLamSau[cot+1] = (5*saiLam) >> 4;
+            demSaiLamSau[cot+2] = saiLam >> 4;
          }
          
          // ---- pixel 7
@@ -434,16 +575,39 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
             mauLuc = kHE_SO_LUC*duLieuTapTinPNG[diaChiPNG+1];
             mauXanh = kHE_SO_XANH*duLieuTapTinPNG[diaChiPNG+2];
             doSang = mauDo + mauLuc + mauXanh;
-            diaChiPNG += 4;
+            diaChiPNG += buocPNG;
             cot++;
             
-            if( doSang < 0x8000 )
+            doSang += demSaiLamHienTai[cot+1] + saiLamPhiaSau;
+            // ---- hạn chế phạm vi độ sáng
+            if( doSang > 0xffff )
+               doSang = 0xffff;
+            else if( doSang < 0 )
+               doSang = 0;
+            
+            if( doSang < 0x8000 ) {
                byte |= 0x01;
+               saiLam = doSang;
+            }
+            else
+               saiLam = doSang - 0xffff;
+            
+            // ---- phân phối sai lầm
+            saiLamPhiaSau = ((7*saiLam) >> 4);
+            demSaiLamSau[cot] = (3*saiLam) >> 4;
+            demSaiLamSau[cot+1] = (5*saiLam) >> 4;
+            demSaiLamSau[cot+2] = saiLam >> 4;
          }
          
          demKhongNen[diaChiDemKhongNen] = byte;
          diaChiDemKhongNen++;
       }
+      
+      // ---- trao đổi đệm sai lầm
+      int *conTro = demSaiLamHienTai;
+      demSaiLamHienTai = demSaiLamSau;
+      demSaiLamSau = conTro;
+
       soHang--;
    }
    
@@ -456,6 +620,12 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
       fputc( demNen[chiSo], tapTinMacPaint );
       chiSo++;
    }
+   
+   // ----
+   free( demSaiLamHienTai );
+   free( demSaiLamSau );
+   free( demKhongNen );
+   free( demNen );
    
    // ---- lưu bề dài dữ liệu
    unsigned int beDaiDuLieu = ftell( tapTinMacPaint );
@@ -561,8 +731,6 @@ void tenAnhMacPaint( char *tenAnhGoc, char *tenAnhMac, unsigned char gioiHan ) {
 #pragma mark ==== main.c
 int main( int argc, char **argv ) {
    
-   char tenTapTin[256] = "MacPaint.mpt";
-   
    if( argc > 1 ) {
       // ---- phân tích đuôi tập tin
       unsigned char loaiTapTin = 0;
@@ -579,7 +747,7 @@ int main( int argc, char **argv ) {
             // ---- đoc ảnh
             DuLieuMacPaint anh = docTapTinMacPaint( tapTinMacPaint );
             fclose( tapTinMacPaint );
-            
+
             // ---- đổi sang PNG
             // ---- chuẩn bị tên tập tin
             char tenTep[255];
@@ -722,7 +890,11 @@ int main( int argc, char **argv ) {
          unsigned char canLatMau = 0;
          unsigned char loaiPNG;
          unsigned char *duLieuAnhPNG = docPNG( argv[1], &beRong, &beCao, &canLatMau, &loaiPNG );
-         printf( "  Khổ %d x %d\n", beRong, beCao );
+         if( duLieuAnhPNG == NULL ) {
+            printf( "Vấn đề mở tập tin PNG: %s\n", argv[1] );
+            exit(0);
+         }
+         printf( "  Khổ %d x %d  loại %d\n", beRong, beCao, loaiPNG );
 
          // ---- chuẩn bị tên tập tin
          char tenTep[64];
@@ -730,7 +902,7 @@ int main( int argc, char **argv ) {
          printf( " %s\n", tenTep );
          
          // ---- lưu tập tin MacPaint
-         luuTapTinMacPaint( tenTep, duLieuAnhPNG, beRong, beCao );
+         luuTapTinMacPaint( tenTep, duLieuAnhPNG, beRong, beCao, loaiPNG );
       }
    }
    return 0;
