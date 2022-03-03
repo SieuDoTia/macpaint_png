@@ -48,7 +48,7 @@ unsigned int crc(unsigned char *buf, int len);
 // ==== LƯU PNG
 void luuAnhPNG( char *tenTep, unsigned char *duLieuAnh, unsigned int beRong, unsigned int beCao, unsigned char loai ) {
    
-   printf( "luuAnhPNG\n" );
+   printf( "luuAnhPNG %d x %d  loai %d\n", beRong, beCao, loai );
    // ---- lọc các hàng ảnh
    unsigned int beDaiDuLieuAnhLoc = 0;
    unsigned char *duLieuAnhLoc = NULL;
@@ -120,8 +120,10 @@ void luuAnhPNG( char *tenTep, unsigned char *duLieuAnh, unsigned int beRong, uns
          else if( loai == kPNG_XAM_DUC ) {
             kemThanhPhanIHDRChoDong( dongTapTin, beRong, beCao, kPNG_XAM_DUC, 8 );
          }
-         else
+         else {
             printf( "PNG: loại chưa biết %d\n", loai );
+            exit(0);
+         }
          
          // ----
          unsigned int beDaiDuLieuAnhNen = c_stream.total_out;
@@ -1386,7 +1388,7 @@ unsigned char *locNguocDuLieuDiemAnh_24Bit(unsigned char *duLieuDaLoc,  unsigned
       boLoc = duLieuDaLoc[diaChiTrongDuLieuNen];
       // ---- byte tiếp là bắt đầu dữ liệu bị lọc và nén
       diaChiTrongDuLieuNen++;
-      
+
       if( boLoc == 0 ) { // ---- không lọc, chỉ cần chép hàng này
          unsigned int soCot = 0;  // số cột
          unsigned int soCotCuoi = beRong*3;  // số cột cuối nhân 4 (4 byte một điểm ảnh)
@@ -1442,11 +1444,11 @@ unsigned char *locNguocDuLieuDiemAnh_24Bit(unsigned char *duLieuDaLoc,  unsigned
          unsigned int soCotCuoi = beRong*3;  // số cột cuối nhân 3 (3 byte một điểm ảnh)
          while( soCot < soCotCuoi ) {
             duLieuAnhKhongLoc[diaChiAnh + soCot] = ((int)duLieuDaLoc[diaChiTrongDuLieuNen + soCot] +
-                                                    ((int)duLieuAnhKhongLoc[diaChiHangTruocKhongLoc + soCot] + (int)duLieuAnhKhongLoc[diaChiAnh + soCot - 4]) / 2) & 0xff;
+                                                    ((int)duLieuAnhKhongLoc[diaChiHangTruocKhongLoc + soCot] + (int)duLieuAnhKhongLoc[diaChiAnh + soCot - 3]) / 2) & 0xff;
             duLieuAnhKhongLoc[diaChiAnh + soCot + 1] = ((int)duLieuDaLoc[diaChiTrongDuLieuNen + soCot + 1] +
-                                                        ((int)duLieuAnhKhongLoc[diaChiHangTruocKhongLoc + soCot + 1] + (int)duLieuAnhKhongLoc[diaChiAnh + soCot - 3]) / 2) & 0xff;
+                                                        ((int)duLieuAnhKhongLoc[diaChiHangTruocKhongLoc + soCot + 1] + (int)duLieuAnhKhongLoc[diaChiAnh + soCot - 2]) / 2) & 0xff;
             duLieuAnhKhongLoc[diaChiAnh + soCot + 2] = ((int)duLieuDaLoc[diaChiTrongDuLieuNen + soCot + 2] +
-                                                        ((int)duLieuAnhKhongLoc[diaChiHangTruocKhongLoc + soCot + 2] + (int)duLieuAnhKhongLoc[diaChiAnh + soCot - 2]) / 2) & 0xff;
+                                                        ((int)duLieuAnhKhongLoc[diaChiHangTruocKhongLoc + soCot + 2] + (int)duLieuAnhKhongLoc[diaChiAnh + soCot - 1]) / 2) & 0xff;
             soCot += 3;
          }
       }
