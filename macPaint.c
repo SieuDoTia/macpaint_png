@@ -175,7 +175,7 @@ DuLieuMacPaint docTapTinMacPaint( FILE *tapTinMacPaint ) {
 
    DuLieuMacPaint duLieuMacPaint;
    
-   unsigned int uncompressed_data_length = 72*720;  // 576/8 = 72 byte
+   unsigned int uncompressed_data_length = 72*720 << 1;  // 576/8 = 72 byte
    
    char *demNen = malloc( 73*720 );
 
@@ -183,7 +183,6 @@ DuLieuMacPaint docTapTinMacPaint( FILE *tapTinMacPaint ) {
       printf( "Problem create compressed buffer\n" );
       exit(0);
    }
-   
 
    // ==== đầu
    fseek(tapTinMacPaint, 1, SEEK_SET );
@@ -227,7 +226,7 @@ DuLieuMacPaint docTapTinMacPaint( FILE *tapTinMacPaint ) {
    
    // ---- rã ảnh
    unsigned char *duLieu = duLieuMacPaint.duLieuAnh;
-   uncompress_rle( demNen, beDaiDemNen, duLieu, 72*720*2 );
+   uncompress_rle( demNen, beDaiDemNen, duLieu, 72*720 << 1 );
 
    return duLieuMacPaint;
 }
@@ -639,6 +638,21 @@ void luuTapTinMacPaint( char *tenTapTinMacPaint, unsigned char *duLieuTapTinPNG,
    fclose( tapTinMacPaint );
 }
 
+
+#pragma mark ---- Lật Bit
+void latBitTrongDem( unsigned char *demNguon, unsigned char *demDich, unsigned int beDaiDem ) {
+
+   unsigned int chiSo = 0;
+   while( chiSo < beDaiDem ) {
+      unsigned char byte = *demNguon;
+      *demDich = ~byte;
+      demDich++;
+      demNguon++;
+      chiSo++;
+   }
+}
+
+
 #pragma mark ---- Phân Tích Đuôi Tập Tin
 unsigned char phanTichDuoiTapTin( char *tenTapTin ) {
    
@@ -748,135 +762,14 @@ int main( int argc, char **argv ) {
             DuLieuMacPaint anh = docTapTinMacPaint( tapTinMacPaint );
             fclose( tapTinMacPaint );
 
-            // ---- đổi sang PNG
+            // ==== đổi sang PNG
+            latBitTrongDem( anh.duLieuAnh, anh.duLieuAnh, 72 * 720 );
+            
             // ---- chuẩn bị tên tập tin
             char tenTep[255];
             tenAnhPNG( argv[1], tenTep );
             
-            // ---- pha trộn các kênh
-            unsigned int chiSoCuoi = 720*576 << 2;
-            unsigned char *demPhaTron = malloc( chiSoCuoi );
-            
-            if( demPhaTron != NULL ) {
-               
-               unsigned int chiSo = 0;
-               short hang = 719;
-               unsigned int chiSoByte = hang*72;
-               unsigned char soByteTrongHang = 0;
-               
-               while( chiSo < chiSoCuoi ) {
-                  
-                  unsigned char byte = anh.duLieuAnh[chiSoByte];
-                  unsigned char giaTri = 0;
-                  
-                  // ---- điểm ảnh 0
-                  if( byte & 0x80 )
-                     giaTri = 0;
-                  else
-                     giaTri = 255;
-                  
-                  demPhaTron[chiSo] = giaTri;
-                  demPhaTron[chiSo+1] = giaTri;
-                  demPhaTron[chiSo+2] = giaTri;
-                  demPhaTron[chiSo+3] = 0xff;
-                  chiSo += 4;
-                  
-                  // ---- điểm ảnh 1
-                  if( byte & 0x40 )
-                     giaTri = 0;
-                  else
-                     giaTri = 255;
-                  
-                  demPhaTron[chiSo] = giaTri;
-                  demPhaTron[chiSo+1] = giaTri;
-                  demPhaTron[chiSo+2] = giaTri;
-                  demPhaTron[chiSo+3] = 0xff;
-                  chiSo += 4;
-                  
-                  // ---- điểm ảnh 2
-                  if( byte & 0x20 )
-                     giaTri = 0;
-                  else
-                     giaTri = 255;
-                  
-                  demPhaTron[chiSo] = giaTri;
-                  demPhaTron[chiSo+1] = giaTri;
-                  demPhaTron[chiSo+2] = giaTri;
-                  demPhaTron[chiSo+3] = 0xff;
-                  chiSo += 4;
-                  
-                  // ---- điểm ảnh 3
-                  if( byte & 0x10 )
-                     giaTri = 0;
-                  else
-                     giaTri = 255;
-                  
-                  demPhaTron[chiSo] = giaTri;
-                  demPhaTron[chiSo+1] = giaTri;
-                  demPhaTron[chiSo+2] = giaTri;
-                  demPhaTron[chiSo+3] = 0xff;
-                  chiSo += 4;
-                  
-                  // ---- điểm ảnh 4
-                  if( byte & 0x08 )
-                     giaTri = 0;
-                  else
-                     giaTri = 255;
-                  
-                  demPhaTron[chiSo] = giaTri;
-                  demPhaTron[chiSo+1] = giaTri;
-                  demPhaTron[chiSo+2] = giaTri;
-                  demPhaTron[chiSo+3] = 0xff;
-                  chiSo += 4;
-                  
-                  // ---- điểm ảnh 5
-                  if( byte & 0x04 )
-                     giaTri = 0;
-                  else
-                     giaTri = 255;
-                  
-                  demPhaTron[chiSo] = giaTri;
-                  demPhaTron[chiSo+1] = giaTri;
-                  demPhaTron[chiSo+2] = giaTri;
-                  demPhaTron[chiSo+3] = 0xff;
-                  chiSo += 4;
-                  
-                  // ---- điểm ảnh 6
-                  if( byte & 0x02 )
-                     giaTri = 0;
-                  else
-                     giaTri = 255;
-                  
-                  demPhaTron[chiSo] = giaTri;
-                  demPhaTron[chiSo+1] = giaTri;
-                  demPhaTron[chiSo+2] = giaTri;
-                  demPhaTron[chiSo+3] = 0xff;
-                  chiSo += 4;
-                  
-                  // ---- điểm ảnh 7
-                  if( byte & 0x01 )
-                     giaTri = 0;
-                  else
-                     giaTri = 255;
-                  
-                  demPhaTron[chiSo] = giaTri;
-                  demPhaTron[chiSo+1] = giaTri;
-                  demPhaTron[chiSo+2] = giaTri;
-                  demPhaTron[chiSo+3] = 0xff;
-                  chiSo += 4;
-                  
-                  chiSoByte++;
-                  soByteTrongHang++;
-                  if( soByteTrongHang == 72 ) {
-                     soByteTrongHang = 0;
-                     hang--;
-                     chiSoByte = hang*72;
-                  }
-               }
-               
-               // ---- lưu tập tin PNG
-               luuAnhPNG( tenTep, demPhaTron, 72 << 3, 720, kPNG_BGRO );
-            }
+            luuAnhPNG( tenTep, anh.duLieuAnh , 72 << 3, 720, kPNG_XAM );
             
             // -----
             free( anh.duLieuAnh );
@@ -895,7 +788,8 @@ int main( int argc, char **argv ) {
             exit(0);
          }
          printf( "  Khổ %d x %d  loại %d\n", beRong, beCao, loaiPNG );
-
+         luuAnhPNG( "PNG.png", duLieuAnhPNG, beRong, beCao, loaiPNG );
+         exit(0);
          // ---- chuẩn bị tên tập tin
          char tenTep[64];
          tenAnhMacPaint( argv[1], tenTep, 63 );

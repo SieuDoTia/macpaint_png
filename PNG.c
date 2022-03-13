@@ -14,7 +14,7 @@
 #define kTHANH_PHAN__LOAI_IHDR 0x49484452
 #define kTHANH_PHAN__LOAI_CgBI 0x43674249  // không biết, đặc biệt cho iOS
 #define kTHANH_PHAN__LOAI_IDAT 0x49444154
-#define kTHANH_PHAN__LOAI_PLTE 0x504c5445  // chỉ cho ảnh 8 bit có bảng
+#define kTHANH_PHAN__LOAI_PLTE 0x504c5445  // chỉ cho ảnh 8 bit có bảnh
 
 #define kTHANH_PHAN__LOAI_pHYs 0x70485973
 #define kTHANH_PHAN__LOAI_sBIT 0x73424954
@@ -26,7 +26,7 @@
 #define kTHANH_PHAN__LOAI_IEND 0x49454E44
 
 #define kCO_THUOC_TOI_DA_IDAT  8192   // cỡ thước tối đa khi chẻ thành phần IDAT
-#define kKHO_ANH_TOI_DA 8192   // khổ điểm ảnh lớn tối đa
+#define kKHO_ANH_TOI_DA 8192   // khổ điểm ảnh tối đa
 #define kZLIB_MUC_NEN 6        // hỉnh như số này là chuẩn ưa dùng
 
 // ---- kèm thành phần
@@ -40,7 +40,8 @@ void kemThanhPhanIDATChoDong( FILE *dongTapTin, unsigned char *duLieuMauAnhNen, 
 unsigned char *locDuLieuAnh_32bit( unsigned char *duLieuAnh, unsigned short beRong, unsigned short beCao, unsigned int *beDaiDuLieuAnhLoc);
 unsigned char *locDuLieuAnh_24bit( unsigned char *duLieuAnh, unsigned short beRong, unsigned short beCao, unsigned int *beDaiDuLieuAnhLoc);
 unsigned char *locDuLieuAnh_16bit( unsigned char *duLieuAnh, unsigned short beRong, unsigned short beCao, unsigned int *beDaiDuLieuAnhLoc);
-
+unsigned char *locDuLieuAnh_8bit( unsigned char *duLieuAnh, unsigned short beRong, unsigned short beCao, unsigned int *beDaiDuLieuAnhLoc);
+unsigned char *locDuLieuAnh_1bit( unsigned char *duLieuAnh, unsigned short beRong, unsigned short beCao, unsigned int *beDaiDuLieuAnhLoc );
 
 // ---- CRC
 unsigned int nang_cap_crc(unsigned int crc, unsigned char *buf, int len);
@@ -59,8 +60,11 @@ void luuAnhPNG( char *tenTep, unsigned char *duLieuAnh, unsigned int beRong, uns
       duLieuAnhLoc = locDuLieuAnh_32bit( duLieuAnh, beRong, beCao, &beDaiDuLieuAnhLoc );
    else if( loai == kPNG_BGR )
       duLieuAnhLoc = locDuLieuAnh_24bit( duLieuAnh, beRong, beCao, &beDaiDuLieuAnhLoc );
+   else if( loai == kPNG_XAM )
+       // thật không nên bộ lọc loại này, chỉ chép dữ liệu
+      duLieuAnhLoc = locDuLieuAnh_1bit( duLieuAnh, beRong, beCao, &beDaiDuLieuAnhLoc );
    else
-      duLieuAnhLoc = locDuLieuAnh_16bit( duLieuAnh, beRong, beCao, &beDaiDuLieuAnhLoc );
+      duLieuAnhLoc = NULL;
 
 
    if( duLieuAnhLoc != NULL ) {
@@ -127,9 +131,10 @@ void luuAnhPNG( char *tenTep, unsigned char *duLieuAnh, unsigned int beRong, uns
             // ---- kèm sRGB
             kemThanhPhanSRGBChoDong( dongTapTin, 1 );
          }
-         else if( loai == kPNG_XAM_DUC ) {
+         else if( loai == kPNG_XAM_DUC )
             kemThanhPhanIHDRChoDong( dongTapTin, beRong, beCao, kPNG_XAM_DUC, 8 );
-         }
+         else if( loai == kPNG_XAM )
+            kemThanhPhanIHDRChoDong( dongTapTin, beRong, beCao, kPNG_XAM, 1 );
          else {
             printf( "PNG: loại chưa biết %d\n", loai );
             exit(0);
@@ -148,7 +153,6 @@ void luuAnhPNG( char *tenTep, unsigned char *duLieuAnh, unsigned int beRong, uns
             diaChiDuLieuAnhNen += kCO_THUOC_TOI_DA_IDAT;
          }
 
-         printf( "PNG: thoiGian" );
          // ---- kèm thời gian
          kemThanhPhanTIMEChoDong( dongTapTin );
          
@@ -190,7 +194,7 @@ void kemThanhPhanIHDRChoDong( FILE *dongTapTin, unsigned int beRong, unsigned in
    thanh_phan_ihdr[5] = (beRong & 0xff0000) >> 16;
    thanh_phan_ihdr[6] = (beRong & 0xff00) >> 8;
    thanh_phan_ihdr[7] = (beRong & 0xff);
-   // ---- bề cao ảng
+   // ---- bề cao ảnh
    thanh_phan_ihdr[8] = (beCao & 0xff000000) >> 24;
    thanh_phan_ihdr[9] = (beCao & 0xff0000) >> 16;
    thanh_phan_ihdr[10] = (beCao & 0xff00) >> 8;
@@ -203,8 +207,8 @@ void kemThanhPhanIHDRChoDong( FILE *dongTapTin, unsigned int beRong, unsigned in
    thanh_phan_ihdr[14] = 0x00;  // chỉ có một phương pháp
    // ---- phương pháp lọc
    thanh_phan_ihdr[15] = 0x00;  // đổi theo dữ liệu hàng ảnh
-   // ---- loại interlace
-   thanh_phan_ihdr[16] = 0x00;  // không interlace
+   // ---- loại xen kẽ
+   thanh_phan_ihdr[16] = 0x00;  // không xen kẽ
    
    // ---- tính mã kiểm tra
    unsigned int maKiemTra = (unsigned int)crc(thanh_phan_ihdr, 17);
@@ -1361,15 +1365,53 @@ unsigned char *locDuLieuAnh_8bit( unsigned char *duLieuAnh, unsigned short beRon
    return duLieuAnhLoc;
 }
 
+unsigned char *locDuLieuAnh_1bit( unsigned char *duLieuAnh, unsigned short beRong, unsigned short beCao, unsigned int *beDaiDuLieuAnhLoc ) {
+   
+   *beDaiDuLieuAnhLoc = (beRong * beCao) >> 3;  // 8 bit từng byte
+   // ---- mỗi hàng cần một byte cho thứ bộc lọc
+   //      cho trường hợp này không bọc == 0 (không bộ lọc)
+   *beDaiDuLieuAnhLoc += beCao;
+   
+   unsigned char *duLieuAnhLoc = malloc( *beDaiDuLieuAnhLoc );
+   
+   // ---- chỉ chép dữ liệu, không bộ lọc
+   unsigned int soHang = 0;
+   unsigned int diaChiAnh = 0;
+   unsigned int diaChiAnhLoc = 0;
+   
+   if( duLieuAnhLoc != NULL ) {
+
+      while( soHang < beCao ) {
+         unsigned int soCot = 0;
+         // ---- byte đầu mỗi hàng
+         duLieuAnhLoc[diaChiAnhLoc] = 0x00;
+         diaChiAnhLoc++;
+
+         while( soCot < (beRong  >> 3) ) {
+            // ---- 
+            duLieuAnhLoc[diaChiAnhLoc] = duLieuAnh[diaChiAnh];
+            soCot++;
+            diaChiAnhLoc++;
+            diaChiAnh++;
+         }
+         
+         // ---- hàng tiếp
+         soHang++;
+      }
+   }
+   
+   return duLieuAnhLoc;
+}
+
 
 #pragma mark ---- CRC
 
 unsigned int crc_table[256];
 
-// cờ: đã tính bảng CRC chưa? Đầu tiên chưa tính.
+// cờ: đã tính bảnh CRC chưa? Đầu tiên chưa tính.
 int bang_crc_da_tinh = 0;
 
-// bảng cho tính mã CRC lẹ.
+// bảnh cho tính mã CRC lẹ.
 void tao_bang_crc(void) {
    unsigned int c;
    int n, k;
@@ -1413,7 +1455,7 @@ unsigned int crc(unsigned char *buf, int len) {
 
 #pragma mark ---- ĐỌC PNG
 unsigned char *docTapTinPNG( FILE *dongTapTin, unsigned int *beRong, unsigned int *beCao, unsigned char *bitChoDiemAnh, unsigned char *loaiAnh, unsigned int *doDaiDuLieuDaDoc );
-void docDauTapTinTuDuLieu( FILE *dongDuLieu, unsigned int *beRong, unsigned int *beCao, unsigned char *bitChoDiemAnh, unsigned char *thuMau, unsigned char *nen, unsigned char *boLoc, unsigned char *loaiInterlace );
+void docDauTapTinTuDuLieu( FILE *dongDuLieu, unsigned int *beRong, unsigned int *beCao, unsigned char *bitChoDiemAnh, unsigned char *thuMau, unsigned char *nen, unsigned char *boLoc, unsigned char *loaiXenKe );
 unsigned char *locNguocDuLieuDiemAnh_8Bit( unsigned char *duLieuDaLoc,  unsigned short beRong, unsigned short beCao );
 unsigned char *locNguocDuLieuDiemAnh_24Bit( unsigned char *duLieuDaLoc,  unsigned short beRong, unsigned short beCao );
 unsigned char *locNguocDuLieuDiemAnh_32Bit( unsigned char *duLieuDaLoc,  unsigned short beRong, unsigned short beCao );
@@ -1506,7 +1548,7 @@ unsigned char *docPNG( char *duongTapTin, unsigned int *beRong, unsigned int *be
 }
 
 #pragma mark ---- Đọc Đầu Tập Tin
-void docDauTapTinTuDuLieu( FILE *dongDuLieu, unsigned int *beRong, unsigned int *beCao, unsigned char *bitChoDiemAnh, unsigned char *thuMau, unsigned char *nen, unsigned char *boLoc, unsigned char *loaiInterlace ) {
+void docDauTapTinTuDuLieu( FILE *dongDuLieu, unsigned int *beRong, unsigned int *beCao, unsigned char *bitChoDiemAnh, unsigned char *thuMau, unsigned char *nen, unsigned char *boLoc, unsigned char *loaiXenKe ) {
    
    *beRong = fgetc( dongDuLieu ) << 24 | fgetc( dongDuLieu ) << 16 | fgetc( dongDuLieu ) << 8 |
    fgetc( dongDuLieu );
@@ -1518,7 +1560,7 @@ void docDauTapTinTuDuLieu( FILE *dongDuLieu, unsigned int *beRong, unsigned int 
    // ---- bit cho một điểm ảnh
    *bitChoDiemAnh = fgetc( dongDuLieu );
    
-   // ---- thứ dữ liệu màu (xám, bảng màu, RGBO, v.v.)
+   // ---- thứ dữ liệu màu (xám, bảnh màu, RGBO, v.v.)
    *thuMau = fgetc( dongDuLieu );
    
    // ---- nén
@@ -1528,7 +1570,7 @@ void docDauTapTinTuDuLieu( FILE *dongDuLieu, unsigned int *beRong, unsigned int 
    // ---- bộ lọc
    *boLoc = fgetc( dongDuLieu );
    
-   *loaiInterlace = fgetc( dongDuLieu );
+   *loaiXenKe = fgetc( dongDuLieu );
 }
 
 
@@ -1538,11 +1580,11 @@ unsigned char *docTapTinPNG( FILE *dongTapTin, unsigned int *beRong, unsigned in
    unsigned char *duLieuNen = NULL;    // dữ liệu bị nén từ tập tin PNGn
    unsigned char nen;      // phương pháp nén (hình như chuẩn PNG chỉ có một phương pháp)
    unsigned char boLoc;    // bộ lọc trước nén dữ liệu
-   unsigned char loaiInterlace;
+   unsigned char loaiXenKe;  // loại xen kẽ
    unsigned int doDaiDuLieiIDAT = 0;  // độ dài dữ liệu của tất cả thành phần IDAT
    unsigned int soLuongThanhPhanIDAT = 0;  // cho đếm số lượng thành phần IDAT
    
-   // mảng cko thành phần IDAT; nên không có hơn 2048 cái ^-^ 8192 * 2048 = 16 777 216 byte
+   // mảnh cko thành phần IDAT; nên không có hơn 2048 cái ^-^ 8192 * 2048 = 16 777 216 byte
    unsigned int IDAT_viTriThanhPhan[2048];
    unsigned int IDAT_doDaiThanhPhan[2048];
    
@@ -1579,11 +1621,11 @@ unsigned char *docTapTinPNG( FILE *dongTapTin, unsigned int *beRong, unsigned in
    //         printf( "DocTapTinPNG: docTapTinPNG: doDaiThanhPhan %u (%x)   loaiThanhPhan %c%c%c%c\n", doDaiThanhPhan, doDaiThanhPhan, loaiThanhPhan >> 24, loaiThanhPhan >> 16, loaiThanhPhan >> 8, loaiThanhPhan );
             
             if( loaiThanhPhan == kTHANH_PHAN__LOAI_IHDR ) {
-               docDauTapTinTuDuLieu( dongTapTin, beRong, beCao, bitChoDiemAnh, loaiAnh, &nen, &boLoc, &loaiInterlace);
-               // printf( "kho %d %d  bit %d  loai %d\n", *beRong, *beCao, *bitChoDiemAnh, *loaiAnh );
+               docDauTapTinTuDuLieu( dongTapTin, beRong, beCao, bitChoDiemAnh, loaiAnh, &nen, &boLoc, &loaiXenKe);
+               printf( "khổ %d %d  bit %d  loại %d  nén %d  loạiXenKẽ %d\n", *beRong, *beCao, *bitChoDiemAnh, *loaiAnh, nen, loaiXenKe );
                // ---- nếu ảnh quá lớn không đọc và trở lại sớm
                if( (*beRong > kKHO_ANH_TOI_DA) || (*beCao > kKHO_ANH_TOI_DA) ) {
-                  printf( "DocPNG: docTapTinPNG: lích cỡ qúa to: %d x %d ≥ kKHO_ANH_TOI_DA (%d)\n", *beRong, *beCao, kKHO_ANH_TOI_DA );
+                  printf( "DocPNG: docTapTinPNG: khổ qúa to: %d x %d ≥ kKHO_ANH_TOI_DA (%d)\n", *beRong, *beCao, kKHO_ANH_TOI_DA );
                   return NULL;
                }
                
