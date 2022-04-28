@@ -788,7 +788,7 @@ unsigned char *locDuLieuAnh_24bit( unsigned char *duLieuAnh, unsigned short beRo
       else {
          boLoc = 0;
       }
-      //      NSLog( @"LuuHoaTietPNG: locDuLieuAnh_32bitsố bộ lọc: %d", boLoc );
+      //      NSLog( @"LuuHoaTietPNG: locDuLieuAnh_24bitsố bộ lọc: %d", boLoc );
       // ---- byte đầu là số bộ lọc (loại bộ lọc)
       duLieuAnhLoc[diaChiDuLieuLoc] = boLoc;
       // ---- byte tiếp là byte đầu của dữ liệu lọc
@@ -809,19 +809,19 @@ unsigned char *locDuLieuAnh_24bit( unsigned char *duLieuAnh, unsigned short beRo
          duLieuAnhLoc[diaChiDuLieuLoc + 1] = duLieuAnh[diaChiDuLieuAnh + 1];
          duLieuAnhLoc[diaChiDuLieuLoc + 2] = duLieuAnh[diaChiDuLieuAnh + 2];
          
-         unsigned int soCot = 4;
-         while( soCot < (beRong << 2) ) {
+         unsigned int soCot = 3;
+         while( soCot < (beRong*3) ) {
             duLieuAnhLoc[diaChiDuLieuLoc + soCot] = ((int)duLieuAnh[diaChiDuLieuAnh + soCot]
-                                                     - (int)duLieuAnh[diaChiDuLieuAnh + soCot-4]) & 0xff;
+                                                     - (int)duLieuAnh[diaChiDuLieuAnh + soCot-3]) & 0xff;
             duLieuAnhLoc[diaChiDuLieuLoc + soCot+1] = ((int)duLieuAnh[diaChiDuLieuAnh + soCot+1]
-                                                       - (int)duLieuAnh[diaChiDuLieuAnh + soCot-3]) & 0xff;
-            duLieuAnhLoc[diaChiDuLieuLoc + soCot+2] = ((int)duLieuAnh[diaChiDuLieuAnh + soCot+2]
                                                        - (int)duLieuAnh[diaChiDuLieuAnh + soCot-2]) & 0xff;
+            duLieuAnhLoc[diaChiDuLieuLoc + soCot+2] = ((int)duLieuAnh[diaChiDuLieuAnh + soCot+2]
+                                                       - (int)duLieuAnh[diaChiDuLieuAnh + soCot-1]) & 0xff;
             soCot += 3;
          };
       }
       else if( boLoc == 2 ) {  // ---- bộ lọc lên
-         unsigned int diaChiDuLieuAnhHangTruoc = diaChiDuLieuAnh + (beRong << 2);
+         unsigned int diaChiDuLieuAnhHangTruoc = diaChiDuLieuAnh + (beRong*3);
          unsigned int soCot = 0;
          while( soCot < (beRong << 2) ) {
             duLieuAnhLoc[diaChiDuLieuLoc + soCot] = ((int)duLieuAnh[diaChiDuLieuAnh + soCot]
@@ -834,7 +834,7 @@ unsigned char *locDuLieuAnh_24bit( unsigned char *duLieuAnh, unsigned short beRo
          };
       }
       else if( boLoc == 3 ) {  // ---- bộ lọc trung bình
-         unsigned int diaChiDuLieuAnhHangTruoc = diaChiDuLieuAnh + (beRong << 2);
+         unsigned int diaChiDuLieuAnhHangTruoc = diaChiDuLieuAnh + (beRong*3);
          // --- điểm ành đầu chỉ xài dữ liệu từ hàng ở trên
          // LƯU Ý: đừng dùng >> 1 để chia 2, int có dấu)
          duLieuAnhLoc[diaChiDuLieuLoc] = ((int)duLieuAnh[diaChiDuLieuAnh] - (int)(duLieuAnh[diaChiDuLieuAnhHangTruoc] / 2)) & 0xff;
@@ -844,16 +844,16 @@ unsigned char *locDuLieuAnh_24bit( unsigned char *duLieuAnh, unsigned short beRo
          unsigned int soCot = 3;
          while( soCot < beRong*3 ) {
             duLieuAnhLoc[diaChiDuLieuLoc + soCot] = ((int)duLieuAnh[diaChiDuLieuAnh + soCot]
-                                                     - ((int)duLieuAnh[diaChiDuLieuAnhHangTruoc + soCot] + (int)duLieuAnh[diaChiDuLieuAnh + soCot - 4]) / 2) & 0xff;
+                                                     - ((int)duLieuAnh[diaChiDuLieuAnhHangTruoc + soCot] + (int)duLieuAnh[diaChiDuLieuAnh + soCot - 3]) / 2) & 0xff;
             duLieuAnhLoc[diaChiDuLieuLoc + soCot + 1] = ((int)duLieuAnh[diaChiDuLieuAnh + soCot + 1]
-                                                         - ((int)duLieuAnh[diaChiDuLieuAnhHangTruoc + soCot + 1] + (int)duLieuAnh[diaChiDuLieuAnh + soCot - 3]) / 2) & 0xff;
+                                                         - ((int)duLieuAnh[diaChiDuLieuAnhHangTruoc + soCot + 1] + (int)duLieuAnh[diaChiDuLieuAnh + soCot - 2]) / 2) & 0xff;
             duLieuAnhLoc[diaChiDuLieuLoc + soCot + 2] = ((int)duLieuAnh[diaChiDuLieuAnh + soCot + 2]
-                                                         - ((int)duLieuAnh[diaChiDuLieuAnhHangTruoc + soCot + 2] + (int)duLieuAnh[diaChiDuLieuAnh + soCot - 2]) / 2) & 0xff;
+                                                         - ((int)duLieuAnh[diaChiDuLieuAnhHangTruoc + soCot + 2] + (int)duLieuAnh[diaChiDuLieuAnh + soCot - 1]) / 2) & 0xff;
             soCot += 3;
          }
       }
       else if( boLoc == 4 ) {  // ---- bộ lọc paeth
-         unsigned int diaChiDuLieuAnhHangTruoc = diaChiDuLieuAnh + (beRong << 2);
+         unsigned int diaChiDuLieuAnhHangTruoc = diaChiDuLieuAnh + (beRong*3);
          // --- điểm ảnh đầu tiên của hàng chỉ xài dữ liệu từ điểm ảnh ở hàng trên
          duLieuAnhLoc[diaChiDuLieuLoc] = ((int)duLieuAnh[diaChiDuLieuAnh] - (int)duLieuAnh[diaChiDuLieuAnhHangTruoc]) & 0xff;
          duLieuAnhLoc[diaChiDuLieuLoc+1] = ((int)duLieuAnh[diaChiDuLieuAnh + 1] - (int)duLieuAnh[diaChiDuLieuAnhHangTruoc+1]) & 0xff;
@@ -1319,7 +1319,7 @@ unsigned char *locDuLieuAnh_8bit( unsigned char *duLieuAnh, unsigned short beRon
          }
       }
       else if( boLoc == 4 ) {  // ---- bộ lọc paeth
-         unsigned int diaChiDuLieuAnhHangTruoc = diaChiDuLieuAnh + (beRong << 1);
+         unsigned int diaChiDuLieuAnhHangTruoc = diaChiDuLieuAnh + beRong;
          // --- điểm ảnh đầu tiên của hàng chỉ xài dữ liệu từ điểm ảnh ở hàng trên
          duLieuAnhLoc[diaChiDuLieuLoc] = ((int)duLieuAnh[diaChiDuLieuAnh] - (int)duLieuAnh[diaChiDuLieuAnhHangTruoc]) & 0xff;
          
